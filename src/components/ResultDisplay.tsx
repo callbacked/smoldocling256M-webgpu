@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 import {
@@ -29,6 +30,44 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   outputFormat,
   selectedPrompt,
 }) => {
+  const [sanitizedCodeHtml, setSanitizedCodeHtml] = useState<string>('');
+  const [sanitizedMarkdownHtml, setSanitizedMarkdownHtml] = useState<string>('');
+  
+  useEffect(() => {
+    if (outputFormat === 'markdown' && selectedPrompt.value === 'Convert code to text.') {
+      const { code, language } = extractCodeContent(rawResults[currentPage] || '');
+      const processCode = async () => {
+        try {
+          const html = await marked(`\`\`\`${language}\n${code}\n\`\`\``);
+          setSanitizedCodeHtml(DOMPurify.sanitize(html));
+        } catch (err: unknown) {
+          console.error('Error processing code:', err);
+          setSanitizedCodeHtml('<pre>Error processing code</pre>');
+        }
+      };
+      processCode();
+    }
+  }, [outputFormat, selectedPrompt.value, rawResults, currentPage]);
+
+  useEffect(() => {
+    if (outputFormat === 'markdown' && 
+        selectedPrompt.value !== 'Convert formula to LaTeX.' && 
+        !selectedPrompt.value.includes('to OTSL') && 
+        selectedPrompt.value !== 'Convert code to text.') {
+      const processedContent = results[currentPage] || 'Not processed yet';
+      const processMarkdown = async () => {
+        try {
+          const html = await marked(processedContent);
+          setSanitizedMarkdownHtml(DOMPurify.sanitize(html));
+        } catch (err: unknown) {
+          console.error('Error processing markdown:', err);
+          setSanitizedMarkdownHtml('<pre>Error processing markdown</pre>');
+        }
+      };
+      processMarkdown();
+    }
+  }, [outputFormat, selectedPrompt.value, results, currentPage]);
+
   if (isStreaming) {
     return (
       <pre className="streaming-output" ref={streamingDivRef}>
@@ -52,14 +91,15 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
     }
     if (selectedPrompt.value.includes('to OTSL')) {
       const tableHtml = otslToHTML(rawContent);
-      return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: tableHtml }} />;
+      // Use DOMPurify as an additional layer of protection
+      const sanitizedHtml = DOMPurify.sanitize(tableHtml);
+      return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
     }
     if (selectedPrompt.value === 'Convert code to text.') {
-      const { code, language } = extractCodeContent(rawContent);
-      const formattedCode = marked(`\`\`\`${language}\n${code}\n\`\`\``);
-      return <div className="code-body markdown-body" dangerouslySetInnerHTML={{ __html: formattedCode }} />;
+      return <div className="code-body markdown-body" dangerouslySetInnerHTML={{ __html: sanitizedCodeHtml }} />;
     }
-    return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked(processedContent) }} />;
+    
+    return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: sanitizedMarkdownHtml }} />;
   }
 
   if (outputFormat === 'json') return <pre>{processedContent}</pre>;

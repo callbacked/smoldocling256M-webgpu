@@ -283,7 +283,7 @@ function App() {
               <GitHubIcon /> <span>Demo Repo</span>
             </a>
             <a href="https://huggingface.co/ds4sd/SmolDocling-256M-preview" target="_blank" rel="noreferrer" className="header-link">
-              <HuggingFaceIcon /> <span>Model card</span>
+              <HuggingFaceIcon /> <span>Model Card</span>
             </a>
           </div>
         </div>

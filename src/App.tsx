@@ -65,6 +65,11 @@ function App() {
     setStatus,
     setMessage,
     message,
+    modelDownloadProgress,
+    isModelDownloading,
+    isModelLoaded,
+    loadModel,
+    isModelCached,
   } = useDocumentProcessor({
     pageImages,
     totalPages,
@@ -219,8 +224,12 @@ function App() {
   const getStatusInfo = () => {
     switch (status) {
       case 'ready': return { text: 'Ready', className: 'ready' };
+      case 'loading': {
+        // We don't need to show loading status for model download in the status pill anymore
+        // since we have a dedicated pill button for that
+        return { text: 'Loading...', className: '' };
+      }
       case 'processing': {
-
         const tokenMatch = message.match(/Tokens: (\d+)/);
         const tpsMatch = message.match(/\((\d+(\.\d+)?) tokens\/sec\)/);
         
@@ -236,7 +245,7 @@ function App() {
           className: 'processing' 
         };
       }
-      case 'loading': return { text: 'Loading...', className: '' };
+      case 'idle': return { text: 'Ready', className: 'ready' };
       case 'error': return { text: 'Error', className: 'error' };
       default: return { text: 'Idle', className: '' };
     }
@@ -343,6 +352,11 @@ function App() {
             streamingDivRef={streamingDivRef}
             animatedTokens={animatedTokens}
             rawResults={rawResults}
+            isModelDownloading={isModelDownloading}
+            modelDownloadProgress={modelDownloadProgress}
+            isModelLoaded={isModelLoaded}
+            loadModel={loadModel}
+            isModelCached={isModelCached}
           />
         )}
       </main>

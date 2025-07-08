@@ -1029,6 +1029,35 @@ canvas {
   border: 1px solid transparent;
 }
 
+.status-pill.clickable {
+  cursor: pointer;
+  background: rgba(var(--accent-color-rgb), 0.2);
+  border-color: rgba(var(--accent-color-rgb), 0.3);
+  color: var(--accent-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.status-pill.clickable::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.status-pill.clickable:hover::after {
+  transform: translateX(0);
+}
+
+.status-pill.clickable:active {
+  transform: scale(0.98);
+}
+
 .status-pill.ready {
   background: rgba(16, 185, 129, 0.1);
   color: #10b981;
@@ -1045,6 +1074,17 @@ canvas {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.2);
+}
+
+.status-pill.warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.status-pill.downloading {
+  background-color: var(--accent-color-light);
+  color: var(--text-color-primary);
 }
 
 .floating-action-bar button {
@@ -1677,6 +1717,159 @@ canvas {
   position: relative;
   margin-top: 0.5rem;
   border-top: 1px solid var(--glass-border) !important;
+}
+
+/* Model download indicator styles */
+.model-download-indicator {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-background-glass);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  width: 300px;
+  text-align: center;
+}
+
+.model-download-text {
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.model-download-progress-bar {
+  height: 6px;
+  background-color: var(--color-background-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.model-download-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.floating-action-bar .model-download-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  border-radius: 0 0 12px 12px;
+  background-color: transparent;
+}
+
+.floating-action-bar .model-download-progress {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+}
+
+.status-pill.downloading {
+  background-color: var(--color-accent-light);
+  color: var(--color-text-on-accent);
+}
+
+.downloading-glow {
+  animation: downloading-pulse 2s infinite;
+  box-shadow: 0 0 0 rgba(var(--color-accent-rgb), 0.4);
+}
+
+@keyframes downloading-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--color-accent-rgb), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--color-accent-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--color-accent-rgb), 0);
+  }
+}
+
+/* Model download pill button */
+.model-download-pill-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 90;
+  pointer-events: none;
+}
+
+.model-download-pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 100px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 180px;
+  animation: fadeInUp 0.5s ease-out forwards, pulse-attention 2s infinite;
+  gap: 0.5rem;
+}
+
+.download-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.download-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+
+.model-download-pill:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.model-download-pill:active {
+  transform: translateY(0);
+}
+
+.model-download-pill:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.model-download-pill.downloading {
+  padding-bottom: 1.25rem;
+  cursor: default;
+}
+
+.model-download-pill .model-download-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.model-download-pill .model-download-progress {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  transition: width 0.3s ease;
 }
 
 

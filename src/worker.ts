@@ -6,6 +6,71 @@ import {
   RawImage,
 } from "@huggingface/transformers";
 
+const downloadTracker = {
+    files: new Map<string, { loaded: number; total: number }>(),
+    lastUpdateTime: 0,
+    
+    update(progress: { file: string; loaded: number; total: number }) {
+        this.files.set(progress.file, { loaded: progress.loaded, total: progress.total });
+    },
+
+    calculateOverallProgress(): number {
+        let totalLoaded = 0;
+        const knownTotals = new Map<string, number>();
+
+        for (const [file, progress] of this.files.entries()) {
+            totalLoaded += progress.loaded;
+            knownTotals.set(file, progress.total);
+        }
+
+        let totalSize = 0;
+        for (const size of knownTotals.values()) {
+            totalSize += size;
+        }
+
+        if (totalSize === 0) return 0;
+        
+        const overallProgress = (totalLoaded / totalSize) * 100;
+        return Math.min(overallProgress, 100);
+    },
+    
+    reset() {
+        this.files.clear();
+        this.lastUpdateTime = 0;
+    }
+};
+
+async function checkCache() {
+  const FILES = [
+    'onnx/decoder_model_merged.onnx',
+    'onnx/vision_encoder.onnx',
+    'onnx/embed_tokens.onnx',
+    'tokenizer.json'
+  ];
+  const BASE_URL = `https://huggingface.co/${SmolDocling.model_id}/resolve/main/`;
+
+  try {
+    const cacheKeys = await caches.keys();
+    const transformersCacheName = cacheKeys.find(key => key.startsWith('transformers-cache'));
+
+    if (!transformersCacheName) {
+      self.postMessage({ status: 'cache-checked', isCached: false });
+      return;
+    }
+
+    const cache = await caches.open(transformersCacheName);
+    const promises = FILES.map(file => cache.match(BASE_URL + file));
+    const responses = await Promise.all(promises);
+
+    const isCached = responses.every(response => response && response.ok);
+    self.postMessage({ status: 'cache-checked', isCached });
+
+  } catch (e) {
+    console.error("Error checking cache:", e);
+    self.postMessage({ status: 'cache-checked', isCached: false });
+  }
+}
+
 declare global {
   interface Navigator {
     gpu?: {
@@ -42,14 +107,23 @@ class SmolDocling {
   static model: any;
 
   static async getInstance(progress_callback?: (progress: any) => void) {
+    const enhancedCallback = progress_callback ? 
+      (progress: any) => {
+        const enhancedProgress = { 
+          ...progress, 
+          component: progress.file?.includes('tokenizer') ? 'tokenizer' : 'model' 
+        };
+        progress_callback(enhancedProgress);
+      } : undefined;
+
     this.processor ??= AutoProcessor.from_pretrained(this.model_id, {
-      progress_callback,
+      progress_callback: enhancedCallback,
     });
 
     this.model ??= AutoModelForVision2Seq.from_pretrained(this.model_id, {
       dtype: "fp32",
       device: "webgpu",
-      progress_callback,
+      progress_callback: enhancedCallback,
     });
 
     return Promise.all([this.processor, this.model]);
@@ -97,9 +171,7 @@ async function generate(imageDataUrl: string, prompt = "Convert this page to doc
         try {
           const now = performance.now();
           const tokenText = processor.tokenizer.decode(tokens, { skip_special_tokens: false });
-          
-          // Send token updates more frequently for a more real-time feel
-          // But limit to max 20 updates per second to avoid overwhelming the UI
+        
           if (now - lastUpdateTime > 50) {
             lastUpdateTime = now;
             self.postMessage({
@@ -180,11 +252,27 @@ async function load() {
     data: "Loading SmolDocling model...",
   });
 
+  downloadTracker.reset();
+
   try {
-    await SmolDocling.getInstance((x) => {
-      self.postMessage(x);
+    await SmolDocling.getInstance((progressData) => {
+      if (progressData.status !== 'progress') {
+        self.postMessage(progressData);
+        return;
+      }
+        
+      downloadTracker.update(progressData);
+
+      const now = performance.now();
+      if (now - downloadTracker.lastUpdateTime > 100) { // Throttle to 10fps
+        const overallProgress = downloadTracker.calculateOverallProgress();
+        self.postMessage({ status: 'progress', progress: overallProgress });
+        downloadTracker.lastUpdateTime = now;
+      }
     });
 
+    const finalProgress = downloadTracker.calculateOverallProgress();
+    self.postMessage({ status: 'progress', progress: finalProgress });
     self.postMessage({ status: "ready" });
   } catch (error) {
     console.error("Model loading error:", error);
@@ -201,6 +289,10 @@ self.addEventListener("message", async (e: MessageEvent) => {
   switch (type) {
     case "check":
       check();
+      break;
+      
+    case "check-cache":
+      checkCache();
       break;
 
     case "load":

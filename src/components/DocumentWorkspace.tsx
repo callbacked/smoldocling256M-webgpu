@@ -53,6 +53,11 @@ interface DocumentWorkspaceProps {
   setStatus: React.Dispatch<React.SetStateAction<'idle' | 'loading' | 'ready' | 'processing' | 'error'>>;
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+  isModelDownloading: boolean;
+  modelDownloadProgress: number;
+  isModelLoaded: boolean;
+  loadModel: () => void;
+  isModelCached: boolean | null;
 
   // Props for PageDisplay
   pageImages: string[];
@@ -110,6 +115,11 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
   streamingDivRef,
   animatedTokens,
   rawResults,
+  isModelDownloading,
+  modelDownloadProgress,
+  isModelLoaded,
+  loadModel,
+  isModelCached,
 }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const dragCounterRef = useRef(0);
@@ -230,6 +240,9 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
     };
   }, [status, setStatus]);
 
+  const shouldShowDownloadPill = !isModelLoaded && status !== 'error' && !isModelDownloading;
+  const shouldShowProgressPill = !isModelLoaded && status !== 'error' && isModelDownloading;
+
   return (
     <div 
       className="document-workspace"
@@ -337,7 +350,31 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
         </div>
       </div>
       
-      <div className="floating-action-bar-container">
+      {shouldShowDownloadPill && (
+        <div className="model-download-pill-container">
+          <button 
+            className="model-download-pill"
+            onClick={loadModel}
+          >
+            <span className="download-icon"><DownloadIcon /></span> Download Model
+          </button>
+        </div>
+      )}
+      {shouldShowProgressPill && (
+        <div className="model-download-pill-container">
+          <div className="model-download-pill downloading">
+            {isModelCached ? 'Loading Model (Cache): ' : 'Downloading Model: '}{modelDownloadProgress > 0 ? Math.round(modelDownloadProgress) : 0}%
+            <div className="model-download-progress-bar">
+              <div 
+                className="model-download-progress" 
+                style={{ width: `${modelDownloadProgress > 0 ? modelDownloadProgress : 0}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isModelLoaded && (
+        <div className="floating-action-bar-container">
           <div className={`format-selector ${isPromptMenuOpen ? 'prompt-open' : ''}`} ref={formatSelectorRef}>
             <div className="format-selector-active-bg" style={activePillStyle}></div>
             <button
@@ -365,140 +402,141 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
               <CodeIconSmall /> RAW
             </button>
           </div>
-        <div className={`floating-action-bar ${status === 'processing' ? 'processing-glow' : ''}`}>
-          
-          <div className={`status-pill ${getStatusInfo().className}`}>
-            {getStatusInfo().text}
-          </div>
-          
-          {imageFile && (
-            <>
-              <div className="divider"></div>
-              <div className="file-info">
-                <FileIcon />
-                <div className="file-name">{imageFile.name}</div>
-              </div>
-            </>
-          )}
-          
-          <div className="divider"></div>
-          
-          <div className="action-button-group" ref={promptMenuRef}>
-            {status === 'processing' ? (
-              <button 
-                onClick={cancelProcessing} 
-                className="primary cancel-button"
-              >
-                <StopIcon /> Cancel
-              </button>
-            ) : (
+          <div className={`floating-action-bar ${status === 'processing' ? 'processing-glow' : ''}`}>
+            
+            <div className={`status-pill ${getStatusInfo().className}`}>
+              {getStatusInfo().text}
+            </div>
+            
+            {imageFile && (
               <>
-                <button 
-                  onClick={startProcessing} 
-                  disabled={!imageFile}
-                  className="primary main-action"
-                >
-                  <PlayIcon /> {`${selectedPrompt.label}${selectedRegion ? ' (Selected Region)' : ''}`}
-                </button>
-                <button
-                  onClick={() => setIsPromptMenuOpen(!isPromptMenuOpen)}
-                  className="primary dropdown-trigger"
-                >
-                  <ChevronDownIcon />
-                </button>
+                <div className="divider"></div>
+                <div className="file-info">
+                  <FileIcon />
+                  <div className="file-name">{imageFile.name}</div>
+                </div>
               </>
             )}
+            
+            <div className="divider"></div>
+            
+            <div className="action-button-group" ref={promptMenuRef}>
+              {status === 'processing' ? (
+                <button 
+                  onClick={cancelProcessing} 
+                  className="primary cancel-button"
+                >
+                  <StopIcon /> Cancel
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={startProcessing} 
+                    disabled={!imageFile}
+                    className="primary main-action"
+                  >
+                    <PlayIcon /> {`${selectedPrompt.label}${selectedRegion ? ' (Selected Region)' : ''}`}
+                  </button>
+                  <button
+                    onClick={() => setIsPromptMenuOpen(!isPromptMenuOpen)}
+                    className="primary dropdown-trigger"
+                  >
+                    <ChevronDownIcon />
+                  </button>
+                </>
+              )}
 
-            {isPromptMenuOpen && status !== 'processing' && (
-              <div className="prompt-menu">
-                {isCustomPromptVisible ? (
-                  <form onSubmit={handleCustomPromptSubmit} className="custom-prompt-form">
-                    <input 
-                      type="text"
-                      ref={customPromptInputRef}
-                      className="custom-prompt-input"
-                      placeholder="Type your custom prompt..."
-                      value={customPromptText}
-                      onChange={(e) => setCustomPromptText(e.target.value)}
-                      autoFocus
-                    />
-                    <div className="custom-prompt-buttons">
-                      <button type="button" onClick={() => setIsCustomPromptVisible(false)} className="cancel-prompt-btn">
-                        Cancel
-                      </button>
-                      <button type="submit" className="submit-prompt-btn" disabled={!customPromptText.trim()}>
-                        Submit
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    {prompts.map(p => (
+              {isPromptMenuOpen && status !== 'processing' && (
+                <div className="prompt-menu">
+                  {isCustomPromptVisible ? (
+                    <form onSubmit={handleCustomPromptSubmit} className="custom-prompt-form">
+                      <input 
+                        type="text"
+                        ref={customPromptInputRef}
+                        className="custom-prompt-input"
+                        placeholder="Type your custom prompt..."
+                        value={customPromptText}
+                        onChange={(e) => setCustomPromptText(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="custom-prompt-buttons">
+                        <button type="button" onClick={() => setIsCustomPromptVisible(false)} className="cancel-prompt-btn">
+                          Cancel
+                        </button>
+                        <button type="submit" className="submit-prompt-btn" disabled={!customPromptText.trim()}>
+                          Submit
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      {prompts.map(p => (
+                        <button 
+                          key={p.value} 
+                          className={selectedPrompt.value === p.value ? 'active' : ''}
+                          onClick={() => {
+                            setSelectedPrompt(p);
+                            setIsPromptMenuOpen(false);
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                      
+                      {selectedPrompt && !prompts.some(p => p.value === selectedPrompt.value) && (
+                        <button 
+                          className="active current-custom-prompt"
+                          onClick={() => {
+                            setIsPromptMenuOpen(false);
+                          }}
+                        >
+                          {selectedPrompt.label}
+                        </button>
+                      )}
+                      
                       <button 
-                        key={p.value} 
-                        className={selectedPrompt.value === p.value ? 'active' : ''}
+                        className="custom-prompt-btn"
                         onClick={() => {
-                          setSelectedPrompt(p);
-                          setIsPromptMenuOpen(false);
+                          setIsCustomPromptVisible(true);
+                          setCustomPromptText("");
                         }}
                       >
-                        {p.label}
+                        {selectedPrompt && !prompts.some(p => p.value === selectedPrompt.value) 
+                          ? "New Custom Prompt..." 
+                          : "Custom Prompt..."}
                       </button>
-                    ))}
-                    
-                    {selectedPrompt && !prompts.some(p => p.value === selectedPrompt.value) && (
-                      <button 
-                        className="active current-custom-prompt"
-                        onClick={() => {
-                          setIsPromptMenuOpen(false);
-                        }}
-                      >
-                        {selectedPrompt.label}
-                      </button>
-                    )}
-                    
-                    <button 
-                      className="custom-prompt-btn"
-                      onClick={() => {
-                        setIsCustomPromptVisible(true);
-                        setCustomPromptText("");
-                      }}
-                    >
-                      {selectedPrompt && !prompts.some(p => p.value === selectedPrompt.value) 
-                        ? "New Custom Prompt..." 
-                        : "Custom Prompt..."}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className={`download-button-wrapper ${results.filter(Boolean).length > 0 ? 'visible' : ''}`}>
+              <button 
+                onClick={downloadResults} 
+                disabled={results.filter(Boolean).length === 0}
+                className="download-button icon-button"
+                title="Download results"
+              >
+                <DownloadIcon />
+              </button>
+            </div>
+            
+            <div className="divider"></div>
+            
+            <label htmlFor="file-upload-2" className="file-upload-label icon-button">
+              <NewFileIcon />
+            </label>
+            <input 
+              type="file" 
+              id="file-upload-2" 
+              accept="image/*,application/pdf" 
+              onChange={handleFileChange}
+              disabled={status === 'processing'}
+            />
           </div>
-          
-          <div className={`download-button-wrapper ${results.filter(Boolean).length > 0 ? 'visible' : ''}`}>
-            <button 
-              onClick={downloadResults} 
-              disabled={results.filter(Boolean).length === 0}
-              className="download-button icon-button"
-              title="Download results"
-            >
-              <DownloadIcon />
-            </button>
-          </div>
-          
-          <div className="divider"></div>
-          
-          <label htmlFor="file-upload-2" className="file-upload-label icon-button">
-            <NewFileIcon />
-          </label>
-          <input 
-            type="file" 
-            id="file-upload-2" 
-            accept="image/*,application/pdf" 
-            onChange={handleFileChange}
-            disabled={status === 'processing'}
-          />
         </div>
-      </div>
+      )}
       
       {status === 'error' && (
         <div className="error-box">

@@ -40,6 +40,10 @@ export const useDocumentProcessor = ({
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamingOutput, setStreamingOutput] = useState<string>('');
   const [animatedTokens, setAnimatedTokens] = useState<string[]>([]);
+  const [modelDownloadProgress, setModelDownloadProgress] = useState<number>(0);
+  const [isModelDownloading, setIsModelDownloading] = useState<boolean>(false);
+  const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
+  const [isModelCached, setIsModelCached] = useState<boolean | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
 
@@ -114,10 +118,14 @@ export const useDocumentProcessor = ({
         case 'loading':
           setStatus('loading');
           setMessage(data);
+          setIsModelDownloading(true);
+          setIsModelLoaded(false);
           break;
         case 'ready':
           setStatus('ready');
           setMessage('Model loaded. Ready to process image.');
+          setIsModelDownloading(false);
+          setIsModelLoaded(true);
           break;
         case 'start':
           setMessage('Processing page...');
@@ -163,16 +171,31 @@ export const useDocumentProcessor = ({
           setErrorMessage(data);
           setIsStreaming(false);
           break;
-        default:
-          if ('percent' in e.data) {
-            setProgress(e.data.percent);
+
+        case 'cache-checked':
+          setIsModelCached(e.data.isCached);
+          if (e.data.isCached) {
+            loadModel();
           }
           break;
+          
+        case 'progress':
+          if (typeof e.data.progress === 'number') {
+            setModelDownloadProgress(e.data.progress);
+          }
+          break;
+          
+        default:
+            // For backward compatibility or other messages
+            if (e.data && e.data.status === 'progress' && typeof e.data.progress === 'number') {
+                setModelDownloadProgress(e.data.progress);
+            }
+            break;
       }
     };
 
     workerRef.current.postMessage({ type: 'check' });
-    workerRef.current.postMessage({ type: 'load' });
+    workerRef.current.postMessage({ type: 'check-cache' });
 
     return () => {
       if (workerRef.current) {
@@ -181,6 +204,14 @@ export const useDocumentProcessor = ({
       }
     };
   }, [currentPage, outputFormat, setCurrentPage, totalPages]);
+
+  const loadModel = useCallback(() => {
+    if (workerRef.current) {
+      setIsModelDownloading(true);
+      setModelDownloadProgress(0);
+      workerRef.current.postMessage({ type: 'load' });
+    }
+  }, []);
 
   useEffect(() => {
     if (status === 'processing' && pageImages[currentPage]) {
@@ -239,5 +270,10 @@ export const useDocumentProcessor = ({
     setStatus,
     setMessage,
     reset,
+    modelDownloadProgress,
+    isModelDownloading,
+    isModelLoaded,
+    loadModel,
+    isModelCached,
   };
 }; 

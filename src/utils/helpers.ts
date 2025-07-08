@@ -15,7 +15,7 @@ export function extractFormulaContent(rawOutput: string): string {
     return match[1].replace(/<loc_.*?>/g, '').trim();
   }
 
-  return "Could not parse formula from model output.";
+  return "";
 }
 
 export function extractCodeContent(rawOutput: string): { code: string, language: string } {
@@ -71,8 +71,7 @@ export function processOTSL(otslString: string, format: 'html' | 'markdown' = 'h
   const otslMatch = otslString.match(/<(otsl|chart)>([\s\S]*?)<\/\1>/);
   if (!otslMatch) {
     return format === 'html' ? 
-      '<p>Could not find OTSL tags in the output.</p>' : 
-      'Could not find OTSL tags in the output.';
+      '' : '' 
   }
   
   const cleanOtsl = otslMatch[2].replace(/<loc_.*?>/g, '').trim();
@@ -100,8 +99,7 @@ export function processOTSL(otslString: string, format: 'html' | 'markdown' = 'h
 
   if (tokens.length === 0) {
     return format === 'html' ? 
-      '<p>Could not parse any tokens from OTSL.</p>' : 
-      'Could not parse any tokens from OTSL.';
+      '' : '' 
   }
   
   if (format === 'markdown') {

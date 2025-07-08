@@ -41,6 +41,7 @@ interface DocumentWorkspaceProps {
   startProcessing: () => void;
   cancelProcessing: () => void;
   selectedPrompt: { value: string; label: string };
+  usedPrompts: { value: string; label: string }[];
   selectedRegion: Region | null;
   isPromptMenuOpen: boolean;
   setIsPromptMenuOpen: (isOpen: boolean) => void;
@@ -88,6 +89,7 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
   startProcessing,
   cancelProcessing,
   selectedPrompt,
+  usedPrompts,
   selectedRegion,
   isPromptMenuOpen,
   setIsPromptMenuOpen,
@@ -329,6 +331,7 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
               currentPage={currentPage}
               outputFormat={outputFormat}
               selectedPrompt={selectedPrompt}
+              usedPrompts={usedPrompts}
             />
           </div>
         </div>

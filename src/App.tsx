@@ -53,6 +53,7 @@ function App() {
     status,
     results,
     rawResults,
+    usedPrompts,
     errorMessage,
     isStreaming,
     streamingOutput,
@@ -130,9 +131,31 @@ function App() {
   const downloadResults = () => {
     if (results.length === 0) return;
     
-    const contentToDownload = outputFormat === 'raw' ? 
-      rawResults.join('\n\n---\n\n') : 
-      results.join('\n\n---\n\n');
+
+    const processedResults = results.map((result, index) => {
+      const promptUsedForPage = usedPrompts && usedPrompts[index] 
+        ? usedPrompts[index] 
+        : selectedPrompt;
+      
+      if (outputFormat === 'raw') {
+        return rawResults[index] || '';
+      } else if (outputFormat === 'markdown') {
+        if (promptUsedForPage.value === 'Convert formula to LaTeX.') {
+          return extractFormulaContent(rawResults[index] || '');
+        } else if (promptUsedForPage.value === 'Convert code to text.') {
+          const { code } = extractCodeContent(rawResults[index] || '');
+          return code;
+        } else if (promptUsedForPage.value.includes('to OTSL')) {
+          return otslToMarkdown(rawResults[index] || '');
+        } else {
+          return result || '';
+        }
+      } else {
+        return result || '';
+      }
+    });
+    
+    const contentToDownload = processedResults.join('\n\n---\n\n');
     
     const blob = new Blob([contentToDownload], { 
       type: outputFormat === 'markdown' ? 'text/markdown' : 
@@ -222,15 +245,19 @@ function App() {
   const copyToClipboard = () => {
     let contentToCopy = '';
     
+    const promptUsedForCurrentPage = usedPrompts && usedPrompts[currentPage] 
+      ? usedPrompts[currentPage] 
+      : selectedPrompt; 
+    
     if (outputFormat === 'raw') {
       contentToCopy = rawResults[currentPage] || '';
     } else if (outputFormat === 'markdown') {
-      if (selectedPrompt.value === 'Convert formula to LaTeX.') {
+      if (promptUsedForCurrentPage.value === 'Convert formula to LaTeX.') {
         contentToCopy = extractFormulaContent(rawResults[currentPage] || '');
-      } else if (selectedPrompt.value === 'Convert code to text.') {
+      } else if (promptUsedForCurrentPage.value === 'Convert code to text.') {
         const { code } = extractCodeContent(rawResults[currentPage] || '');
         contentToCopy = code;
-      } else if (selectedPrompt.value.includes('to OTSL')) {
+      } else if (promptUsedForCurrentPage.value.includes('to OTSL')) {
         contentToCopy = otslToMarkdown(rawResults[currentPage] || '');
       } else {
         contentToCopy = results[currentPage] || '';
@@ -296,6 +323,7 @@ function App() {
             startProcessing={startProcessing}
             cancelProcessing={cancelProcessing}
             selectedPrompt={selectedPrompt}
+            usedPrompts={usedPrompts}
             selectedRegion={selectedRegion}
             isPromptMenuOpen={isPromptMenuOpen}
             setIsPromptMenuOpen={setIsPromptMenuOpen}

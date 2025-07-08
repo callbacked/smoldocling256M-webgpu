@@ -34,6 +34,7 @@ export const useDocumentProcessor = ({
   const [message, setMessage] = useState<string>('');
   const [results, setResults] = useState<string[]>([]);
   const [rawResults, setRawResults] = useState<string[]>([]);
+  const [usedPrompts, setUsedPrompts] = useState<{ value: string; label: string }[]>([]);
   const [progress, setProgress] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -52,6 +53,13 @@ export const useDocumentProcessor = ({
 
     let imageToProcess = pageImages[currentPage];
     let promptToSend = selectedPrompt.value;
+
+    // Store the prompt being used for this page
+    setUsedPrompts(prev => {
+      const newPrompts = [...prev];
+      newPrompts[currentPage] = { ...selectedPrompt };
+      return newPrompts;
+    });
 
     if (selectedRegion) {
       const metrics = getImageMetrics();
@@ -186,6 +194,7 @@ export const useDocumentProcessor = ({
       setCurrentPage(0);
       setResults(new Array(totalPages).fill(''));
       setRawResults(new Array(totalPages).fill(''));
+      setUsedPrompts(new Array(totalPages).fill(null));
       setAnimatedTokens([]);
     }
   };
@@ -204,6 +213,7 @@ export const useDocumentProcessor = ({
     setMessage('');
     setResults([]);
     setRawResults([]);
+    setUsedPrompts([]);
     setProgress(0);
     setErrorMessage('');
     setIsStreaming(false);
@@ -216,6 +226,7 @@ export const useDocumentProcessor = ({
     message,
     results,
     rawResults,
+    usedPrompts,
     progress,
     errorMessage,
     isStreaming,

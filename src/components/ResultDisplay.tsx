@@ -18,6 +18,7 @@ interface ResultDisplayProps {
   currentPage: number;
   outputFormat: 'markdown' | 'json' | 'raw';
   selectedPrompt: { value: string; label: string };
+  usedPrompts: { value: string; label: string }[];
 }
 
 export const ResultDisplay: React.FC<ResultDisplayProps> = ({
@@ -29,12 +30,19 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   currentPage,
   outputFormat,
   selectedPrompt,
+  usedPrompts,
 }) => {
   const [sanitizedCodeHtml, setSanitizedCodeHtml] = useState<string>('');
   const [sanitizedMarkdownHtml, setSanitizedMarkdownHtml] = useState<string>('');
   
+  // Get the prompt that was used to generate the current page's content
+  const promptUsedForCurrentPage = usedPrompts && usedPrompts[currentPage] 
+    ? usedPrompts[currentPage] 
+    : selectedPrompt; // Fall back to selected prompt if no used prompt is available
+  
+  // Process code content when needed
   useEffect(() => {
-    if (outputFormat === 'markdown' && selectedPrompt.value === 'Convert code to text.') {
+    if (outputFormat === 'markdown' && promptUsedForCurrentPage?.value === 'Convert code to text.') {
       const { code, language } = extractCodeContent(rawResults[currentPage] || '');
       const processCode = async () => {
         try {
@@ -47,13 +55,14 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
       };
       processCode();
     }
-  }, [outputFormat, selectedPrompt.value, rawResults, currentPage]);
+  }, [outputFormat, promptUsedForCurrentPage?.value, rawResults, currentPage]);
 
+  // Process general markdown content when needed
   useEffect(() => {
     if (outputFormat === 'markdown' && 
-        selectedPrompt.value !== 'Convert formula to LaTeX.' && 
-        !selectedPrompt.value.includes('to OTSL') && 
-        selectedPrompt.value !== 'Convert code to text.') {
+        promptUsedForCurrentPage?.value !== 'Convert formula to LaTeX.' && 
+        !promptUsedForCurrentPage?.value?.includes('to OTSL') && 
+        promptUsedForCurrentPage?.value !== 'Convert code to text.') {
       const processedContent = results[currentPage] || 'Not processed yet';
       const processMarkdown = async () => {
         try {
@@ -66,7 +75,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
       };
       processMarkdown();
     }
-  }, [outputFormat, selectedPrompt.value, results, currentPage]);
+  }, [outputFormat, promptUsedForCurrentPage?.value, results, currentPage]);
 
   if (isStreaming) {
     return (
@@ -85,17 +94,17 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   if (outputFormat === 'raw') return <pre>{rawContent}</pre>;
 
   if (outputFormat === 'markdown') {
-    if (selectedPrompt.value === 'Convert formula to LaTeX.') {
+    if (promptUsedForCurrentPage?.value === 'Convert formula to LaTeX.') {
       const formula = extractFormulaContent(rawContent);
       return <div className="latex-body"><BlockMath math={formula} /></div>;
     }
-    if (selectedPrompt.value.includes('to OTSL')) {
+    if (promptUsedForCurrentPage?.value?.includes('to OTSL')) {
       const tableHtml = otslToHTML(rawContent);
       // Use DOMPurify as an additional layer of protection
       const sanitizedHtml = DOMPurify.sanitize(tableHtml);
       return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
     }
-    if (selectedPrompt.value === 'Convert code to text.') {
+    if (promptUsedForCurrentPage?.value === 'Convert code to text.') {
       return <div className="code-body markdown-body" dangerouslySetInnerHTML={{ __html: sanitizedCodeHtml }} />;
     }
     

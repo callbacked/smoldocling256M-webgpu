@@ -279,8 +279,8 @@ function App() {
           <h1>SmolDocling 256M</h1>
           <p className="subtitle">Transform documents into structured, machine-readable text with WebGPU acceleration</p>
           <div className="header-links">
-            <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer" className="header-link">
-              <GitHubIcon /> <span>Repo</span>
+            <a href="https://github.com/callbacked/smoldocling256M-webgpu" target="_blank" rel="noreferrer" className="header-link">
+              <GitHubIcon /> <span>Demo Repo</span>
             </a>
             <a href="https://huggingface.co/ds4sd/SmolDocling-256M-preview" target="_blank" rel="noreferrer" className="header-link">
               <HuggingFaceIcon /> <span>Model card</span>

@@ -563,20 +563,10 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid var(--glass-border);
   padding-bottom: var(--spacing-4);
   margin-bottom: var(--spacing-4);
-  margin-top: 1.25rem;
-  position: relative;
-}
-
-.result-header::after {
-  content: '';
-  position: absolute;
-  bottom: -0.4rem; 
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--glass-border);
+  margin-top: 1rem; 
 }
 
 .result-actions {

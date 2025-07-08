@@ -4,7 +4,11 @@
 
 This project is a demo using the **SmolDocling-256M** model to perform document understanding tasks. Allowing you to transform document images into structured formats like Markdown and JSON, and more!
 
-**Try it out on Hugging Face** [Link soon]
+
+https://github.com/user-attachments/assets/b9c06328-a194-4316-ae44-c8ab030c480b
+
+
+[Try it out on Hugging Face!](https://huggingface.co/spaces/callbacked/smoldocling256M-webgpu) 
 
 ## Features
 
